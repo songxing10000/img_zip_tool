@@ -325,6 +325,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
                           },
                           background: Container(
+                            color: Colors.red,
                             alignment: Alignment.centerRight,
                             padding:const EdgeInsets.only(right: 16),
                             child: const Icon(Icons.delete, color: Colors.white),
