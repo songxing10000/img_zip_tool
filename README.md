@@ -1,16 +1,7 @@
 # img_zip_tool
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+ 解压iOS1x2x3x的图片zip到工程里的Assets.xcassets文件夹内
+ 
+ 之前是用Swift写的
+ ![](./Snip20230523_10.png)
+考虑到后面可能在windows上，就改用flutter写了
+ ![](./Snip20230523_9.png)
