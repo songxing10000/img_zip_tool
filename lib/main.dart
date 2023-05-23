@@ -1,15 +1,14 @@
 import 'dart:io';
 import 'package:archive/archive.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_toastr/flutter_toastr.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path/path.dart' as path;
 import 'package:cross_file/cross_file.dart';
 import 'package:desktop_drop/desktop_drop.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker_cross/file_picker_cross.dart';
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -28,9 +27,9 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _filePath = '';
+  String _zip_file_path = '';
   String _imageName = '';
-  String _targetDir = '';
+  String _xcassetsFolderPath = '';
   List<String> _imageNames = [];
 
   bool _dragging = false;
@@ -41,8 +40,19 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     _imageNamesController.addListener(_onImageNamesChanged);
+    _loadPrefs();
   }
-
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+     final String? saveImageNameFilePath = prefs.getString('_imageName_key');
+    final String? saveTargetDirFilePath = prefs.getString('_targetDir_key');
+    final List<String>? saveImgNames = prefs.getStringList('_imageNames_key');
+    setState(() {
+       _imageName = saveImageNameFilePath ??'';
+       _xcassetsFolderPath = saveTargetDirFilePath ?? '';
+       _imageNames = saveImgNames ?? [];
+    });
+  }
   @override
   void dispose() {
     _imageNamesController.dispose();
@@ -63,7 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (result != null) {
       setState(() {
-        _filePath = result.files.single.path!;
+        _zip_file_path = result.files.single.path!;
       });
     }
   }
@@ -72,8 +82,10 @@ class _MyHomePageState extends State<MyHomePage> {
     final directory = await getDirectoryPath();
     if (directory != null) {
       setState(() {
-        _targetDir = directory;
+        _xcassetsFolderPath = directory;
       });
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('_targetDir_key', _xcassetsFolderPath);
     }
   }
 
@@ -87,16 +99,16 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _extractZip() async {
-    if (_filePath.isEmpty) {
+    if (_zip_file_path.isEmpty) {
       return;
     }
 
-    if (_targetDir.isEmpty) {
+    if (_xcassetsFolderPath.isEmpty) {
       _showErrorDialog('Please select target directory.');
       return;
     }
 
-    final bytes = File(_filePath).readAsBytesSync();
+    final bytes =  File(_zip_file_path).readAsBytesSync();
     final archive = ZipDecoder().decodeBytes(bytes);
 
     if (archive.length == 1) {
@@ -109,7 +121,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
-    final imagesetDir = Directory('$_targetDir/$_imageName.imageset');
+    final imagesetDir = Directory('$_xcassetsFolderPath/$_imageName.imageset');
     if (!imagesetDir.existsSync()) {
       imagesetDir.createSync(recursive: true);
     }
@@ -177,6 +189,8 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         _imageNames.add(_imageName);
       });
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setStringList('_imageNames_key', _imageNames);
     }
   }
 
@@ -209,14 +223,16 @@ class _MyHomePageState extends State<MyHomePage> {
           FileSystemEntityType type = FileSystemEntity.typeSync(aFile.path);
           if(type == FileSystemEntityType.file && aFile.name.endsWith(".zip")){
             setState(() {
-              _filePath = aFile.path;
+              _zip_file_path = aFile.path;
             });
-            debugPrint('onDragDone: $_filePath');
+            debugPrint('onDragDone: $_zip_file_path');
           } else if(type == FileSystemEntityType.directory && aFile.name.endsWith(".xcassets")){
             // 是文件夹
             setState(() {
-              _targetDir = aFile.path;
+              _xcassetsFolderPath = aFile.path;
             });
+            final SharedPreferences prefs = await SharedPreferences.getInstance();
+            prefs.setString('_targetDir_key', _xcassetsFolderPath);
           }
 
 
@@ -237,22 +253,25 @@ class _MyHomePageState extends State<MyHomePage> {
            });
         },
         child:
-            Container(color: Colors.brown,width: double.infinity,height: double.infinity,child:  Column(
+            Container(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+              child:  Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
+
               ElevatedButton(
                 onPressed: _pickFile,
-                child: const Text('选择Zip文件'),
+                child: const Text('选择或拽入Zip文件'),
               ),
               const SizedBox(height: 16),
-              Text(_filePath),
+              Text(_zip_file_path),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _pickDirectory,
-                child: const Text('选择输出目录'),
+                child: const Text('选择或拽入.xcassets目录'),
               ),
               const SizedBox(height: 16),
-              Text(_targetDir),
+              Text(_xcassetsFolderPath),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -266,15 +285,17 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (_imageName.isNotEmpty &&
                           !_imageNames.contains(_imageName)) {
                         setState(() {
                           _imageNames.add(_imageName);
                         });
+                        final SharedPreferences prefs = await SharedPreferences.getInstance();
+                        prefs.setStringList('_imageNames_key', _imageNames);
                       }
                     },
-                    child: const Text('Add'),
+                    child: const Text('加入列表'),
                   ),
                 ],
               ),
@@ -293,13 +314,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     );
                     return  Dismissible(
                           key: Key(imageName),
-                          onDismissed: (direction) {
+                          onDismissed: (direction)  async {
+
+
+
                             setState(() {
                               _imageNames.removeAt(index);
                             });
+                            final SharedPreferences prefs = await SharedPreferences.getInstance();
+                            prefs.setStringList('_imageNames_key', _imageNames);
+
                           },
                           background: Container(
-                            color: Colors.red,
                             alignment: Alignment.centerRight,
                             padding:const EdgeInsets.only(right: 16),
                             child: const Icon(Icons.delete, color: Colors.white),
@@ -312,8 +338,9 @@ class _MyHomePageState extends State<MyHomePage> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _extractZip,
-                child: const Text('开始解压Zip'),
+                child: const Text('开始工作'),
               ),
+
             ],
           ),)
         )
