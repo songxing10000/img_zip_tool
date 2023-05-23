@@ -7,7 +7,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:file_picker_cross/file_picker_cross.dart';
 
 void main() => runApp(MyApp());
 
