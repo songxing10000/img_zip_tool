@@ -26,12 +26,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  /// zip的路径
   String _zip_file_path = '';
-  String _imageName = '';
-  String _xcassetsFolderPath = '';
-  List<String> _imageNames = [];
 
-  bool _dragging = false;
+  /// 要取的图片名
+  String _imageName = '';
+
+  /// xcassets路径
+  String _xcassetsFolderPath = '';
+
+  /// 历史曾用名
+  List<String> _imageNames = [];
 
   final _imageNamesController = TextEditingController();
 
@@ -41,17 +46,19 @@ class _MyHomePageState extends State<MyHomePage> {
     _imageNamesController.addListener(_onImageNamesChanged);
     _loadPrefs();
   }
+
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-     final String? saveImageNameFilePath = prefs.getString('_imageName_key');
+    final String? saveImageNameFilePath = prefs.getString('_imageName_key');
     final String? saveTargetDirFilePath = prefs.getString('_targetDir_key');
     final List<String>? saveImgNames = prefs.getStringList('_imageNames_key');
     setState(() {
-       _imageName = saveImageNameFilePath ??'';
-       _xcassetsFolderPath = saveTargetDirFilePath ?? '';
-       _imageNames = saveImgNames ?? [];
+      _imageName = saveImageNameFilePath ?? '';
+      _xcassetsFolderPath = saveTargetDirFilePath ?? '';
+      _imageNames = saveImgNames ?? [];
     });
   }
+
   @override
   void dispose() {
     _imageNamesController.dispose();
@@ -64,7 +71,8 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  Future<void> _pickFile() async {
+  /// 选取zip文件
+  Future<void> _pickZipFile() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['zip'],
@@ -77,7 +85,8 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  Future<void> _pickDirectory() async {
+  /// 选取xcassets文件夹
+  Future<void> _pickXcassetsFolder() async {
     final directory = await getDirectoryPath();
     if (directory != null) {
       setState(() {
@@ -88,6 +97,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  /// 获取要默认显示的文档路径
   Future<String?> getDirectoryPath() async {
     final directory = await getApplicationDocumentsDirectory();
     final path = directory.path;
@@ -107,7 +117,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
-    final bytes =  File(_zip_file_path).readAsBytesSync();
+    final bytes = File(_zip_file_path).readAsBytesSync();
     final archive = ZipDecoder().decodeBytes(bytes);
 
     if (archive.length == 1) {
@@ -145,6 +155,23 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     // mastergo.com上导出切图，默认会有123x图，但是1x图是不需要的，所以得删除1x图片
+    _delete1xImg(imagesetDir);
+
+    _writeContentJsonFile(imagesetDir);
+
+    FlutterToastr.show('操作完成!', context,
+        duration: 1, position: FlutterToastr.center);
+
+    if (!_imageNames.contains(_imageName)) {
+      setState(() {
+        _imageNames.add(_imageName);
+      });
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setStringList('_imageNames_key', _imageNames);
+    }
+  }
+
+  void _delete1xImg(Directory imagesetDir) {
     final files = imagesetDir.listSync();
     for (final file in files) {
       if (file is File &&
@@ -153,7 +180,9 @@ class _MyHomePageState extends State<MyHomePage> {
         file.deleteSync();
       }
     }
+  }
 
+  void _writeContentJsonFile(Directory imagesetDir) {
     var contentsJson = '''
       {
   "images" : [
@@ -180,17 +209,6 @@ class _MyHomePageState extends State<MyHomePage> {
     ''';
     contentsJson = contentsJson.replaceAll("AAA123ZZZ", _imageName);
     File('${imagesetDir.path}/Contents.json').writeAsStringSync(contentsJson);
-
-    FlutterToastr.show('Zip file extracted successfully!', context,
-        duration: 1, position: FlutterToastr.center);
-
-    if (!_imageNames.contains(_imageName)) {
-      setState(() {
-        _imageNames.add(_imageName);
-      });
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setStringList('_imageNames_key', _imageNames);
-    }
   }
 
   void _showErrorDialog(String message) {
@@ -209,142 +227,138 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  /// 拖拽完毕
+  void _onDragDone(DropDoneDetails detail) async {
+    if (detail.files.length != 1) {
+      return;
+    }
+    XFile aFile = detail.files[0];
+    FileSystemEntityType type = FileSystemEntity.typeSync(aFile.path);
+    if (type == FileSystemEntityType.file && aFile.name.endsWith(".zip")) {
+      setState(() {
+        _zip_file_path = aFile.path;
+      });
+      debugPrint('onDragDone: $_zip_file_path');
+    } else if (type == FileSystemEntityType.directory &&
+        aFile.name.endsWith(".xcassets")) {
+      // 是文件夹
+      setState(() {
+        _xcassetsFolderPath = aFile.path;
+      });
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('_targetDir_key', _xcassetsFolderPath);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body:
-        DropTarget(
-        onDragDone: (detail) async {
-          if(detail.files.length != 1){
-            return;
-          }
-          XFile aFile = detail.files[0];
-          FileSystemEntityType type = FileSystemEntity.typeSync(aFile.path);
-          if(type == FileSystemEntityType.file && aFile.name.endsWith(".zip")){
-            setState(() {
-              _zip_file_path = aFile.path;
-            });
-            debugPrint('onDragDone: $_zip_file_path');
-          } else if(type == FileSystemEntityType.directory && aFile.name.endsWith(".xcassets")){
-            // 是文件夹
-            setState(() {
-              _xcassetsFolderPath = aFile.path;
-            });
-            final SharedPreferences prefs = await SharedPreferences.getInstance();
-            prefs.setString('_targetDir_key', _xcassetsFolderPath);
-          }
+        body: DropTarget(
+            onDragDone: (detail) {
+              _onDragDone(detail);
+            },
+            child: buildContainer()));
+  }
 
-
-        },
-        onDragUpdated: (details) {
-          setState(() {
-            // offset = details.localPosition;
-          });
-        },
-        onDragEntered: (detail) {
-          setState(() {
-            _dragging = true;
-           });
-        },
-        onDragExited: (detail) {
-          setState(() {
-            _dragging = false;
-           });
-        },
-        child:
-            Container(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-              child:  Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-
-              ElevatedButton(
-                onPressed: _pickFile,
-                child: const Text('选择或拽入Zip文件'),
-              ),
-              const SizedBox(height: 16),
-              Text(_zip_file_path),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _pickDirectory,
-                child: const Text('选择或拽入.xcassets目录'),
-              ),
-              const SizedBox(height: 16),
-              Text(_xcassetsFolderPath),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _imageNamesController,
-                      decoration: const InputDecoration(
-                        hintText: '输入图片名',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (_imageName.isNotEmpty &&
-                          !_imageNames.contains(_imageName)) {
-                        setState(() {
-                          _imageNames.add(_imageName);
-                        });
-                        final SharedPreferences prefs = await SharedPreferences.getInstance();
-                        prefs.setStringList('_imageNames_key', _imageNames);
-                      }
-                    },
-                    child: const Text('加入列表'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _imageNames.length,
-                  itemBuilder: (context, index) {
-                    final imageName = _imageNames[index];
-
-                    ListTile cell = ListTile(
-                      title: Text(imageName),
-                      onTap: () {
-                        _imageNamesController.text = imageName;
-                      },
-                    );
-                    return  Dismissible(
-                          key: Key(imageName),
-                          onDismissed: (direction)  async {
-
-
-
-                            setState(() {
-                              _imageNames.removeAt(index);
-                            });
-                            final SharedPreferences prefs = await SharedPreferences.getInstance();
-                            prefs.setStringList('_imageNames_key', _imageNames);
-
-                          },
-                          background: Container(
-                            color: Colors.red,
-                            alignment: Alignment.centerRight,
-                            padding:const EdgeInsets.only(right: 16),
-                            child: const Icon(Icons.delete, color: Colors.white),
-                          ),
-                          child: cell);
-
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _extractZip,
-                child: const Text('开始工作'),
-              ),
-
-            ],
-          ),)
-        )
-
+  Container buildContainer() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+      child: buildColumn(),
     );
+  }
+
+  Column buildColumn() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        ElevatedButton(
+          onPressed: _pickZipFile,
+          child: const Text('选择或拽入Zip文件'),
+        ),
+        const SizedBox(height: 16),
+        Text(_zip_file_path),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _pickXcassetsFolder,
+          child: const Text('选择或拽入.xcassets目录'),
+        ),
+        const SizedBox(height: 16),
+        Text(_xcassetsFolderPath),
+        const SizedBox(height: 16),
+        buildRow(),
+        const SizedBox(height: 16),
+        Expanded(
+          child: buildListView(),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: _extractZip,
+          child: const Text('开始工作'),
+        ),
+      ],
+    );
+  }
+
+  ListView buildListView() {
+    return ListView.builder(
+      itemCount: _imageNames.length,
+      itemBuilder: (context, index) {
+        final imageName = _imageNames[index];
+
+        ListTile cell = ListTile(
+          title: Text(imageName),
+          onTap: () {
+            _imageNamesController.text = imageName;
+          },
+        );
+        return Dismissible(
+            key: Key(imageName),
+            onDismissed: (direction) async {
+              setState(() {
+                _imageNames.removeAt(index);
+              });
+              final SharedPreferences prefs =
+                  await SharedPreferences.getInstance();
+              prefs.setStringList('_imageNames_key', _imageNames);
+            },
+            background: Container(
+              color: Colors.red,
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 16),
+              child: const Icon(Icons.delete, color: Colors.white),
+            ),
+            child: cell);
+      },
+    );
+  }
+
+  Row buildRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _imageNamesController,
+            decoration: const InputDecoration(
+              hintText: '输入图片名',
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        ElevatedButton(
+          onPressed: _clickAddToListBtn,
+          child: const Text('加入列表'),
+        ),
+      ],
+    );
+  }
+
+  void _clickAddToListBtn() async {
+    if (_imageName.isNotEmpty && !_imageNames.contains(_imageName)) {
+      setState(() {
+        _imageNames.add(_imageName);
+      });
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setStringList('_imageNames_key', _imageNames);
+    }
   }
 }
