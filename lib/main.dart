@@ -7,7 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_toastr/flutter_toastr.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
-
+import 'package:path/path.dart' as path;
+import 'package:cross_file/cross_file.dart';
+import 'package:desktop_drop/desktop_drop.dart';
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -30,6 +32,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String _imageName = '';
   String _targetDir = '';
   List<String> _imageNames = [];
+
+  bool _dragging = false;
 
   final _imageNamesController = TextEditingController();
 
@@ -192,129 +196,128 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _showImageMenu(BuildContext context, Widget cell, String imageName) {
-    // final RenderBox box = context.findRenderObject() as RenderBox;
-    // final Offset position = box.localToGlobal(Offset.zero);
-    //
-    //
-    // final sliverList = context.findRenderObject() as RenderSliverMultiBoxAdaptor ;
-    // final childElement = sliverList.childManager.childElements.toList()[_imageNames.indexOf(imageName)];
-    // final childRenderBox = childElement.renderObject as RenderBox;
-    //
-    //
-    //
-    //
-    //
-    //
-    // showMenu(
-    //   context: context,
-    //   position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx + childRenderBox.size.width, position.dy + childRenderBox.size.height),
-    //   items: [
-    //     PopupMenuItem(
-    //       value: 'delete',
-    //       child: Text('Delete'),
-    //     ),
-    //   ],
-    // ).then((value) {
-    //   if (value == 'delete') {
-    //     setState(() {
-    //       _imageNames.remove(imageName);
-    //     });
-    //   }
-    // });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Zip File Extractor'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              onPressed: _pickFile,
-              child: const Text('Select Zip File'),
-            ),
-            const SizedBox(height: 16),
-            Text(_filePath),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _pickDirectory,
-              child: const Text('Select Target Directory'),
-            ),
-            const SizedBox(height: 16),
-            Text(_targetDir),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _imageNamesController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter image name',
+      body:
+        DropTarget(
+        onDragDone: (detail) async {
+          if(detail.files.length != 1){
+            return;
+          }
+          XFile aFile = detail.files[0];
+          FileSystemEntityType type = FileSystemEntity.typeSync(aFile.path);
+          if(type == FileSystemEntityType.file && aFile.name.endsWith(".zip")){
+            setState(() {
+              _filePath = aFile.path;
+            });
+            debugPrint('onDragDone: $_filePath');
+          } else if(type == FileSystemEntityType.directory && aFile.name.endsWith(".xcassets")){
+            // 是文件夹
+            setState(() {
+              _targetDir = aFile.path;
+            });
+          }
+
+
+        },
+        onDragUpdated: (details) {
+          setState(() {
+            // offset = details.localPosition;
+          });
+        },
+        onDragEntered: (detail) {
+          setState(() {
+            _dragging = true;
+           });
+        },
+        onDragExited: (detail) {
+          setState(() {
+            _dragging = false;
+           });
+        },
+        child:
+            Container(color: Colors.brown,width: double.infinity,height: double.infinity,child:  Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              ElevatedButton(
+                onPressed: _pickFile,
+                child: const Text('选择Zip文件'),
+              ),
+              const SizedBox(height: 16),
+              Text(_filePath),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _pickDirectory,
+                child: const Text('选择输出目录'),
+              ),
+              const SizedBox(height: 16),
+              Text(_targetDir),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _imageNamesController,
+                      decoration: const InputDecoration(
+                        hintText: '输入图片名',
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_imageName.isNotEmpty &&
-                        !_imageNames.contains(_imageName)) {
-                      setState(() {
-                        _imageNames.add(_imageName);
-                      });
-                    }
-                  },
-                  child: const Text('Add'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _imageNames.length,
-                itemBuilder: (context, index) {
-                  final imageName = _imageNames[index];
-
-                  ListTile cell = ListTile(
-                    title: Text(imageName),
-                    onTap: () {
-                      _imageNamesController.text = imageName;
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (_imageName.isNotEmpty &&
+                          !_imageNames.contains(_imageName)) {
+                        setState(() {
+                          _imageNames.add(_imageName);
+                        });
+                      }
                     },
-                  );
-                  return GestureDetector(
-                    onLongPress: () {
-                      _showImageMenu(context, cell, imageName);
-                    },
-                    child: Dismissible(
-                        key: Key(imageName),
-                        onDismissed: (direction) {
-                          setState(() {
-                            _imageNames.removeAt(index);
-                          });
-                        },
-                        background: Container(
-                          color: Colors.red,
-                          child: Icon(Icons.delete, color: Colors.white),
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.only(right: 16),
-                        ),
-                        child: cell),
-                  );
-                },
+                    child: const Text('Add'),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _extractZip,
-              child: const Text('开始解压Zip'),
-            ),
-          ],
-        ),
-      ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _imageNames.length,
+                  itemBuilder: (context, index) {
+                    final imageName = _imageNames[index];
+
+                    ListTile cell = ListTile(
+                      title: Text(imageName),
+                      onTap: () {
+                        _imageNamesController.text = imageName;
+                      },
+                    );
+                    return  Dismissible(
+                          key: Key(imageName),
+                          onDismissed: (direction) {
+                            setState(() {
+                              _imageNames.removeAt(index);
+                            });
+                          },
+                          background: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding:const EdgeInsets.only(right: 16),
+                            child: const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          child: cell);
+
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _extractZip,
+                child: const Text('开始解压Zip'),
+              ),
+            ],
+          ),)
+        )
+
     );
   }
 }
