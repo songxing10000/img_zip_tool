@@ -14,6 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Zip File Extractor',
       home: MyHomePage(),
     );
@@ -235,18 +236,26 @@ class _MyHomePageState extends State<MyHomePage> {
     XFile aFile = detail.files[0];
     FileSystemEntityType type = FileSystemEntity.typeSync(aFile.path);
     if (type == FileSystemEntityType.file && aFile.name.endsWith(".zip")) {
+      // 拖入zip文件
       setState(() {
         _zip_file_path = aFile.path;
       });
       debugPrint('onDragDone: $_zip_file_path');
-    } else if (type == FileSystemEntityType.directory &&
-        aFile.name.endsWith(".xcassets")) {
-      // 是文件夹
-      setState(() {
-        _xcassetsFolderPath = aFile.path;
-      });
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('_targetDir_key', _xcassetsFolderPath);
+    } else if (type == FileSystemEntityType.directory) {
+      // 拖入文件夹
+      if(aFile.name.endsWith(".xcassets")){
+        // 拖入xcassets文件夹
+        // 是文件夹
+        setState(() {
+          _xcassetsFolderPath = aFile.path;
+        });
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('_targetDir_key', _xcassetsFolderPath);
+      }
+      // else if (??) {
+      //
+      // }
+
     }
   }
 
@@ -271,16 +280,28 @@ class _MyHomePageState extends State<MyHomePage> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        ElevatedButton(
-          onPressed: _pickZipFile,
-          child: const Text('选择或拽入Zip文件'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("单个切图zip文件"),
+            ElevatedButton(
+              onPressed: _pickZipFile,
+              child: const Text('1.选择或拽入Zip文件'),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         Text(_zip_file_path),
         const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: _pickXcassetsFolder,
-          child: const Text('选择或拽入.xcassets目录'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text("iOS选xcassets目录，Flutter选择有2.0x和3.0x这个目录"),
+            ElevatedButton(
+              onPressed: _pickXcassetsFolder,
+              child: const Text('2.选择或拽入目录'),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         Text(_xcassetsFolderPath),
