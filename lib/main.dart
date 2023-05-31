@@ -9,6 +9,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:archive/archive.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum FolderType {
   iOS,
@@ -158,9 +159,13 @@ class _MyHomePageState extends State<MyHomePage> {
         : Directory(_folderPath);
 
     if (isIOS) {
-      if (!imagesetDir.existsSync()) {
-        imagesetDir.createSync(recursive: true);
+      if (imagesetDir.existsSync()) {
+        FlutterToastr.show('重名了', context,
+            duration: 1, position: FlutterToastr.center);
+        launchUrl(Uri.parse('file://${imagesetDir.path}'));
+        return;
       }
+      imagesetDir.createSync(recursive: true);
       // Extract the contents of the Zip archive to disk.
       for (final file in archive) {
         var filename = file.name;
@@ -184,7 +189,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _delete1xImg(imagesetDir);
       _writeContentJsonFile(imagesetDir);
     }
-    else if(_folderPath.endsWith('res')){
+    else if (_folderPath.endsWith('res')) {
       // 安卓
       for (final file in archive) {
         var filename = file.name;
@@ -201,7 +206,8 @@ class _MyHomePageState extends State<MyHomePage> {
           }
         }
       }
-    } else {
+    }
+    else {
       // flutter 1x图片放目录 2x图片放2.0x文件，3x图片放3.0x文件夹
       for (final file in archive) {
         var filename = file.name;
@@ -315,22 +321,19 @@ class _MyHomePageState extends State<MyHomePage> {
     } else if (type == FileSystemEntityType.directory) {
       // 拖入文件夹
       if (aFile.name.endsWith(".xcassets")) {
-        // 拖入xcassets文件夹
         folderType = FolderType.iOS;
-        setState(() {
-          _folderPath = aFile.path;
-        });
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('_targetDir_key', _folderPath);
-      } else if (await has2x3xImgFolderAt(aFile.path)) {
-        // 拖入的是Flutter的图片文件夹
-        folderType = FolderType.flutter;
-        setState(() {
-          _folderPath = aFile.path;
-        });
-        final SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('_targetDir_key', _folderPath);
       }
+      else  if (aFile.name.endsWith("res")) {
+        folderType = FolderType.android;
+      }
+      else if (await has2x3xImgFolderAt(aFile.path)) {
+        folderType = FolderType.flutter;
+      }
+      setState(() {
+        _folderPath = aFile.path;
+      });
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('_targetDir_key', _folderPath);
     }
   }
 
