@@ -13,6 +13,7 @@ import 'package:archive/archive.dart';
 enum FolderType {
   iOS,
   flutter,
+  android,
 }
 
 void main() => runApp(MyApp());
@@ -98,25 +99,23 @@ class _MyHomePageState extends State<MyHomePage> {
   /// 选取xcassets文件夹
   Future<void> _pickFolder() async {
     final directory = await getDirectoryPath();
-    if (directory != null) {
-      // 拖入文件夹
-      if (directory.endsWith(".xcassets")) {
-
-        folderType = FolderType.iOS;
-
-      } else if (await has2x3xImgFolderAt(directory)) {
-        // 拖入的是Flutter的图片文件夹
-        folderType = FolderType.flutter;
-
-      }
-
-
-      setState(() {
-        _folderPath = directory;
-      });
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('_targetDir_key', _folderPath);
+    if (directory == null) {
+      return;
     }
+    // 拖入文件夹
+    if (directory.endsWith(".xcassets")) {
+      folderType = FolderType.iOS;
+    } else if (directory.endsWith("res")) {
+      folderType = FolderType.android;
+    } else if (await has2x3xImgFolderAt(directory)) {
+      folderType = FolderType.flutter;
+    }
+
+    setState(() {
+      _folderPath = directory;
+    });
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.setString('_targetDir_key', _folderPath);
   }
 
   /// 获取要默认显示的文档路径
@@ -152,7 +151,8 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
-    bool isIOS = (folderType == FolderType.iOS) && _folderPath.endsWith('.xcassets');
+    bool isIOS =
+        (folderType == FolderType.iOS) && _folderPath.endsWith('.xcassets');
     final imagesetDir = isIOS
         ? Directory('$_folderPath/$_imageName.imageset')
         : Directory(_folderPath);
@@ -183,6 +183,24 @@ class _MyHomePageState extends State<MyHomePage> {
       // mastergo.com上导出切图，默认会有123x图，但是1x图是不需要的，所以得删除1x图片
       _delete1xImg(imagesetDir);
       _writeContentJsonFile(imagesetDir);
+    }
+    else if(_folderPath.endsWith('res')){
+      // 安卓
+      for (final file in archive) {
+        var filename = file.name;
+        /*
+        *  mdpi/组 3.png xhdpi/组 3.png  xxhdpi/组 3.png xxxhdpi/组 3.png
+        * */
+        if (file.isFile && filename.endsWith('.png')) {
+          final data = file.content as List<int>;
+          if (filename.contains('/')) {
+            String folderName = filename.split('/')[0];
+            File('${imagesetDir.path}/mipmap-$folderName/$_imageName.png')
+              ..createSync(recursive: true)
+              ..writeAsBytesSync(data);
+          }
+        }
+      }
     } else {
       // flutter 1x图片放目录 2x图片放2.0x文件，3x图片放3.0x文件夹
       for (final file in archive) {
@@ -192,7 +210,7 @@ class _MyHomePageState extends State<MyHomePage> {
         * */
         if (file.isFile && filename.endsWith('.png')) {
           final data = file.content as List<int>;
-          if(filename.contains('/')){
+          if (filename.contains('/')) {
             String folderName = filename.split('/')[0];
             File('${imagesetDir.path}/$folderName/$_imageName.png')
               ..createSync(recursive: true)
@@ -200,8 +218,8 @@ class _MyHomePageState extends State<MyHomePage> {
           } else {
             // 1x图片
             File('${imagesetDir.path}/$_imageName.png')
-            ..createSync(recursive: true)
-            ..writeAsBytesSync(data);
+              ..createSync(recursive: true)
+              ..writeAsBytesSync(data);
           }
         }
       }
@@ -217,12 +235,14 @@ class _MyHomePageState extends State<MyHomePage> {
       prefs.setStringList('_imageNames_key', _imageNames);
     }
   }
+
   List<ArchiveFile> listFilesInDirectory(ArchiveFile directory) {
     final archive = ZipDecoder().decodeBytes(directory.content);
     return archive.where((entry) {
       return entry.isFile && entry.name.endsWith('.png');
     }).toList();
   }
+
   void _delete1xImg(Directory imagesetDir) {
     final files = imagesetDir.listSync();
     for (final file in files) {
@@ -387,7 +407,7 @@ class _MyHomePageState extends State<MyHomePage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("iOS选xcassets目录，Flutter选择有2.0x和3.0x这个目录"),
+            const Text("iOS选xcassets目录，Flutter选有2.0x和3.0x这个目录，安卓选res目录"),
             ElevatedButton(
               onPressed: _pickFolder,
               child: const Text('2.选择或拽入目录'),
