@@ -157,14 +157,16 @@ class _MyHomePageState extends State<MyHomePage> {
     final imagesetDir = isIOS
         ? Directory('$_folderPath/$_imageName.imageset')
         : Directory(_folderPath);
-
+    bool hasSameImg = false;
     if (isIOS) {
       if (imagesetDir.existsSync()) {
+        hasSameImg = true;
         FlutterToastr.show('重名了', context,
             duration: 1, position: FlutterToastr.center);
-        launchUrl(Uri.parse('file://${imagesetDir.path}'));
+        _openFolder(imagesetDir.path);
         return;
       }
+
       imagesetDir.createSync(recursive: true);
       // Extract the contents of the Zip archive to disk.
       for (final file in archive) {
@@ -197,10 +199,40 @@ class _MyHomePageState extends State<MyHomePage> {
         *  mdpi/组 3.png xhdpi/组 3.png  xxhdpi/组 3.png xxxhdpi/组 3.png
         * */
         if (file.isFile && filename.endsWith('.png')) {
+
+          if(file.name.contains('@2x')){
+            // 跳过2x
+            FlutterToastr.show('iOS图片zip??', context,
+                duration: 1, position: FlutterToastr.center);
+            return;
+          }
+          if(file.name.contains('@3x')){
+            // 跳过3x
+            FlutterToastr.show('iOS图片zip??', context,
+                duration: 1, position: FlutterToastr.center);
+            return;
+          }
+          if(!file.name.contains('dpi')){
+            // 跳过flutter
+            FlutterToastr.show('flutter图片zip??', context,
+                duration: 1, position: FlutterToastr.center);
+            return;
+          }
           final data = file.content as List<int>;
           if (filename.contains('/')) {
             String folderName = filename.split('/')[0];
-            File('${imagesetDir.path}/mipmap-$folderName/$_imageName.png')
+
+            String desFilePath = '${imagesetDir.path}/mipmap-$folderName/$_imageName.png';
+            if(File(desFilePath).existsSync()){
+              hasSameImg = true;
+              FlutterToastr.show('重名了', context,
+                  duration: 1, position: FlutterToastr.center);
+              _openFolder(desFilePath);
+              break;
+            }
+
+
+            File(desFilePath)
               ..createSync(recursive: true)
               ..writeAsBytesSync(data);
           }
@@ -209,26 +241,67 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     else {
       // flutter 1x图片放目录 2x图片放2.0x文件，3x图片放3.0x文件夹
+
       for (final file in archive) {
         var filename = file.name;
         /*
         *  组 3.png  2.0x/ 2.0x/组 3.png 3.0x/ 3.0x/组 3.png 4.0x/ 4.0x/组 3.png
         * */
+
         if (file.isFile && filename.endsWith('.png')) {
+          if(file.name.contains('dpi')){
+            // 跳过安卓
+            FlutterToastr.show('安卓图片zip??', context,
+                duration: 1, position: FlutterToastr.center);
+            return;
+          }
+          if(file.name.contains('@2x')){
+            // 跳过2x
+            FlutterToastr.show('iOS图片zip??', context,
+                duration: 1, position: FlutterToastr.center);
+            return;
+          }
+          if(file.name.contains('@3x')){
+            // 跳过3x
+            FlutterToastr.show('iOS图片zip??', context,
+                duration: 1, position: FlutterToastr.center);
+            return;
+          }
           final data = file.content as List<int>;
           if (filename.contains('/')) {
             String folderName = filename.split('/')[0];
-            File('${imagesetDir.path}/$folderName/$_imageName.png')
+
+            String desFilePath = '${imagesetDir.path}/$folderName/$_imageName.png';
+            if(File(desFilePath).existsSync()){
+              hasSameImg = true;
+              FlutterToastr.show('重名了', context,
+                  duration: 1, position: FlutterToastr.center);
+              _openFolder(desFilePath);
+              break;
+            }
+
+            File(desFilePath)
               ..createSync(recursive: true)
               ..writeAsBytesSync(data);
           } else {
             // 1x图片
-            File('${imagesetDir.path}/$_imageName.png')
+            String desFilePath = '${imagesetDir.path}/$_imageName.png';
+            if(File(desFilePath).existsSync()){
+              hasSameImg = true;
+              FlutterToastr.show('重名了', context,
+                  duration: 1, position: FlutterToastr.center);
+              _openFolder(desFilePath);
+              break;
+            }
+            File(desFilePath)
               ..createSync(recursive: true)
               ..writeAsBytesSync(data);
           }
         }
       }
+    }
+    if(hasSameImg){
+      return;
     }
     FlutterToastr.show('操作完成!', context,
         duration: 1, position: FlutterToastr.center);
@@ -241,7 +314,13 @@ class _MyHomePageState extends State<MyHomePage> {
       prefs.setStringList('_imageNames_key', _imageNames);
     }
   }
-
+  void _openFolder(String folderPath){
+    if(folderPath.startsWith('file://')){
+      launchUrl(Uri.parse(folderPath));
+    } else {
+      launchUrl(Uri.parse('file://$folderPath'));
+    }
+  }
   List<ArchiveFile> listFilesInDirectory(ArchiveFile directory) {
     final archive = ZipDecoder().decodeBytes(directory.content);
     return archive.where((entry) {
@@ -372,7 +451,17 @@ class _MyHomePageState extends State<MyHomePage> {
     final type = await FileSystemEntity.type(entity.path);
     return type == FileSystemEntityType.directory;
   }
+  bool isFolderExists(String folderPath){
+    Directory dir = Directory(folderPath);
+    if (dir.existsSync()) {
+      return true;
+    }
+    return false;
+  }
 
+  Future<bool> isFileExists(String filePath) async {
+    return await File(filePath).exists();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
