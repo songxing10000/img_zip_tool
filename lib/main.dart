@@ -7,6 +7,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:archive/archive.dart';
+
+enum FolderType {
+  iOS,
+  flutter,
+}
 
 void main() => runApp(MyApp());
 
@@ -27,6 +33,8 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  FolderType folderType = FolderType.iOS;
+
   /// zip的路径
   String _zip_file_path = '';
 
@@ -34,7 +42,7 @@ class _MyHomePageState extends State<MyHomePage> {
   String _imageName = '';
 
   /// xcassets路径
-  String _xcassetsFolderPath = '';
+  String _folderPath = '';
 
   /// 历史曾用名
   List<String> _imageNames = [];
@@ -55,7 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final List<String>? saveImgNames = prefs.getStringList('_imageNames_key');
     setState(() {
       _imageName = saveImageNameFilePath ?? '';
-      _xcassetsFolderPath = saveTargetDirFilePath ?? '';
+      _folderPath = saveTargetDirFilePath ?? '';
       _imageNames = saveImgNames ?? [];
     });
   }
@@ -87,14 +95,26 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   /// 选取xcassets文件夹
-  Future<void> _pickXcassetsFolder() async {
+  Future<void> _pickFolder() async {
     final directory = await getDirectoryPath();
     if (directory != null) {
+      // 拖入文件夹
+      if (directory.endsWith(".xcassets")) {
+
+        folderType = FolderType.iOS;
+
+      } else if (await has2x3xImgFolderAt(directory)) {
+        // 拖入的是Flutter的图片文件夹
+        folderType = FolderType.flutter;
+
+      }
+
+
       setState(() {
-        _xcassetsFolderPath = directory;
+        _folderPath = directory;
       });
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setString('_targetDir_key', _xcassetsFolderPath);
+      prefs.setString('_targetDir_key', _folderPath);
     }
   }
 
@@ -113,7 +133,7 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
-    if (_xcassetsFolderPath.isEmpty) {
+    if (_folderPath.isEmpty) {
       _showErrorDialog('Please select target directory.');
       return;
     }
@@ -131,34 +151,63 @@ class _MyHomePageState extends State<MyHomePage> {
       return;
     }
 
-    final imagesetDir = Directory('$_xcassetsFolderPath/$_imageName.imageset');
-    if (!imagesetDir.existsSync()) {
-      imagesetDir.createSync(recursive: true);
-    }
+    bool isIOS = (folderType == FolderType.iOS) && _folderPath.endsWith('.xcassets');
+    final imagesetDir = isIOS
+        ? Directory('$_folderPath/$_imageName.imageset')
+        : Directory(_folderPath);
 
-    // Extract the contents of the Zip archive to disk.
-    for (final file in archive) {
-      var filename = file.name;
-      if (file.isFile) {
-        final data = file.content as List<int>;
+    if (isIOS) {
+      if (!imagesetDir.existsSync()) {
+        imagesetDir.createSync(recursive: true);
+      }
+      // Extract the contents of the Zip archive to disk.
+      for (final file in archive) {
+        var filename = file.name;
+        if (file.isFile) {
+          final data = file.content as List<int>;
 
-        if (filename.endsWith('@2x.png')) {
-          filename = '$_imageName@2x.png';
-        } else if (filename.endsWith('@3x.png')) {
-          filename = '$_imageName@3x.png';
-        } else {
-          // 1x
+          if (filename.endsWith('@2x.png')) {
+            filename = '$_imageName@2x.png';
+          } else if (filename.endsWith('@3x.png')) {
+            filename = '$_imageName@3x.png';
+          } else {
+            // 1x
+          }
+          File('${imagesetDir.path}/$filename')
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(data);
         }
-        File('${imagesetDir.path}/$filename')
-          ..createSync(recursive: true)
-          ..writeAsBytesSync(data);
+      }
+
+      // mastergo.com上导出切图，默认会有123x图，但是1x图是不需要的，所以得删除1x图片
+      _delete1xImg(imagesetDir);
+      _writeContentJsonFile(imagesetDir);
+    } else {
+      // 1x图片放目录 2x图片放2.0x文件，3x图片放3.0x文件夹
+      for (final file in archive) {
+        var filename = file.name;
+        print(file);
+        if (file.isFile) {
+          final data = file.content as List<int>;
+            filename = '$_imageName.png';
+            File('${imagesetDir.path}/$filename')
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(data);
+
+        } else if (filename.endsWith('/')) {
+          // 是文件夹
+          if (filename.contains('2.0x') || filename.contains('3.0x') || filename.contains('4.0x')) {
+            // 取出文件夹内的图片
+            ArchiveFile subFile  = listFilesInDirectory(file)[0];
+
+            final data = subFile.content as List<int>;
+            File('${imagesetDir.path}/$filename$_imageName.png')
+              ..createSync(recursive: true)
+              ..writeAsBytesSync(data);
+          }
+        }
       }
     }
-
-    // mastergo.com上导出切图，默认会有123x图，但是1x图是不需要的，所以得删除1x图片
-    _delete1xImg(imagesetDir);
-
-    _writeContentJsonFile(imagesetDir);
 
     FlutterToastr.show('操作完成!', context,
         duration: 1, position: FlutterToastr.center);
@@ -171,7 +220,13 @@ class _MyHomePageState extends State<MyHomePage> {
       prefs.setStringList('_imageNames_key', _imageNames);
     }
   }
-
+  List<ArchiveFile> listFilesInDirectory(ArchiveFile directory) {
+    print(directory.content);
+    final archive = ZipDecoder().decodeBytes(directory.content);
+    return archive.where((entry) {
+      return entry.isFile && entry.name.endsWith('.png');
+    }).toList();
+  }
   void _delete1xImg(Directory imagesetDir) {
     final files = imagesetDir.listSync();
     for (final file in files) {
@@ -243,20 +298,60 @@ class _MyHomePageState extends State<MyHomePage> {
       debugPrint('onDragDone: $_zip_file_path');
     } else if (type == FileSystemEntityType.directory) {
       // 拖入文件夹
-      if(aFile.name.endsWith(".xcassets")){
+      if (aFile.name.endsWith(".xcassets")) {
         // 拖入xcassets文件夹
-        // 是文件夹
+        folderType = FolderType.iOS;
         setState(() {
-          _xcassetsFolderPath = aFile.path;
+          _folderPath = aFile.path;
         });
         final SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.setString('_targetDir_key', _xcassetsFolderPath);
+        prefs.setString('_targetDir_key', _folderPath);
+      } else if (await has2x3xImgFolderAt(aFile.path)) {
+        // 拖入的是Flutter的图片文件夹
+        folderType = FolderType.flutter;
+        setState(() {
+          _folderPath = aFile.path;
+        });
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString('_targetDir_key', _folderPath);
       }
-      // else if (??) {
-      //
-      // }
-
     }
+  }
+
+  Future<bool> has2x3xImgFolderAt(String folderPath) async {
+    final folder = Directory(folderPath);
+    final files = await folder.list().toList();
+    bool has2x = false;
+    bool has3x = false;
+    for (final file in files) {
+      if (await is2xDirectory(file)) {
+        has2x = true;
+      } else if (await is3xDirectory(file)) {
+        has3x = true;
+      }
+    }
+    return (has2x && has3x);
+  }
+
+  Future<bool> is2xDirectory(FileSystemEntity entity) async {
+    if (await isDirectory(entity)) {
+      final directory = entity as Directory;
+      return directory.path.endsWith('/2.0x');
+    }
+    return false;
+  }
+
+  Future<bool> is3xDirectory(FileSystemEntity entity) async {
+    if (await isDirectory(entity)) {
+      final directory = entity as Directory;
+      return directory.path.endsWith('/3.0x');
+    }
+    return false;
+  }
+
+  Future<bool> isDirectory(FileSystemEntity entity) async {
+    final type = await FileSystemEntity.type(entity.path);
+    return type == FileSystemEntityType.directory;
   }
 
   @override
@@ -298,13 +393,13 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             const Text("iOS选xcassets目录，Flutter选择有2.0x和3.0x这个目录"),
             ElevatedButton(
-              onPressed: _pickXcassetsFolder,
+              onPressed: _pickFolder,
               child: const Text('2.选择或拽入目录'),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        Text(_xcassetsFolderPath),
+        Text(_folderPath),
         const SizedBox(height: 16),
         buildRow(),
         const SizedBox(height: 16),
