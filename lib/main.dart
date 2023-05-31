@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_toastr/flutter_toastr.dart';
 import 'package:path_provider/path_provider.dart';
@@ -183,32 +184,28 @@ class _MyHomePageState extends State<MyHomePage> {
       _delete1xImg(imagesetDir);
       _writeContentJsonFile(imagesetDir);
     } else {
-      // 1x图片放目录 2x图片放2.0x文件，3x图片放3.0x文件夹
+      // flutter 1x图片放目录 2x图片放2.0x文件，3x图片放3.0x文件夹
       for (final file in archive) {
         var filename = file.name;
-        print(file);
-        if (file.isFile) {
+        /*
+        *  组 3.png  2.0x/ 2.0x/组 3.png 3.0x/ 3.0x/组 3.png 4.0x/ 4.0x/组 3.png
+        * */
+        if (file.isFile && filename.endsWith('.png')) {
           final data = file.content as List<int>;
-            filename = '$_imageName.png';
-            File('${imagesetDir.path}/$filename')
-            ..createSync(recursive: true)
-            ..writeAsBytesSync(data);
-
-        } else if (filename.endsWith('/')) {
-          // 是文件夹
-          if (filename.contains('2.0x') || filename.contains('3.0x') || filename.contains('4.0x')) {
-            // 取出文件夹内的图片
-            ArchiveFile subFile  = listFilesInDirectory(file)[0];
-
-            final data = subFile.content as List<int>;
-            File('${imagesetDir.path}/$filename$_imageName.png')
+          if(filename.contains('/')){
+            String folderName = filename.split('/')[0];
+            File('${imagesetDir.path}/$folderName/$_imageName.png')
               ..createSync(recursive: true)
               ..writeAsBytesSync(data);
+          } else {
+            // 1x图片
+            File('${imagesetDir.path}/$_imageName.png')
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(data);
           }
         }
       }
     }
-
     FlutterToastr.show('操作完成!', context,
         duration: 1, position: FlutterToastr.center);
 
@@ -221,7 +218,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
   List<ArchiveFile> listFilesInDirectory(ArchiveFile directory) {
-    print(directory.content);
     final archive = ZipDecoder().decodeBytes(directory.content);
     return archive.where((entry) {
       return entry.isFile && entry.name.endsWith('.png');
