@@ -306,13 +306,14 @@ class _MyHomePageState extends State<MyHomePage> {
     FlutterToastr.show('操作完成!', context,
         duration: 1, position: FlutterToastr.center);
 
-    if (!_imageNames.contains(_imageName)) {
+    if (_imageName.isNotEmpty && !_imageNames.contains(_imageName)) {
       setState(() {
         _imageNames.add(_imageName);
       });
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setStringList('_imageNames_key', _imageNames);
     }
+
   }
   void _openFolder(String folderPath){
     if(folderPath.startsWith('file://')){
@@ -560,29 +561,19 @@ class _MyHomePageState extends State<MyHomePage> {
     return Row(
       children: [
         Expanded(
+
           child: TextField(
+
+            textAlign: TextAlign.center,
             controller: _imageNamesController,
             decoration: const InputDecoration(
               hintText: '输入图片名',
+                contentPadding:EdgeInsets.fromLTRB(0, 0, 10, 0)
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        ElevatedButton(
-          onPressed: _clickAddToListBtn,
-          child: const Text('加入列表'),
         ),
       ],
     );
   }
 
-  void _clickAddToListBtn() async {
-    if (_imageName.isNotEmpty && !_imageNames.contains(_imageName)) {
-      setState(() {
-        _imageNames.add(_imageName);
-      });
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      prefs.setStringList('_imageNames_key', _imageNames);
-    }
-  }
 }
