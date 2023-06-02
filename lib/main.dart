@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:archive/archive.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'PathLabel.dart';
+
 enum FolderType {
   iOS,
   flutter,
@@ -495,7 +497,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
         const SizedBox(height: 16),
-        Text(_zip_file_path),
+        PathLabel(text: _zip_file_path),
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -508,7 +510,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
         const SizedBox(height: 16),
-        Text(_folderPath),
+        PathLabel(text:_folderPath),
         const SizedBox(height: 16),
         buildRow(),
         const SizedBox(height: 16),
