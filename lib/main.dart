@@ -51,7 +51,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   /// 历史曾用名
   List<String> _imageNames = [];
-
+  /// 图片信息，key图片名，value图片路径
+  Map<String, String> imgInfoDict = {
+    'calendar_purple_bg': '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/red_info_icon.imageset/red_info_icon@2x.png'
+  };
   final _imgNameController = TextEditingController();
 
   @override
@@ -527,6 +530,7 @@ _copyImgName() {
           child: buildListView(),
         ),
         const SizedBox(height: 16),
+
         ElevatedButton(
           onPressed: _extractZip,
           child: const Text('开始工作'),
@@ -544,12 +548,45 @@ _copyImgName() {
         ListTile cell = ListTile(
           title: Text(imageName),
           onTap: () {
+            // 点击cell
             _imgNameController.text = imageName;
+
+
           },
+          trailing: PopupMenuButton<String>(
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'open',
+                child: Text('打开'),
+              ),
+              const PopupMenuItem<String>(
+                value: 'delete',
+                child: Text('删除'),
+              ),
+            ],
+            onSelected: (String value) async {
+              if (value == 'open') {
+                // 打开图片
+                String? imgPath = imgInfoDict[imageName];
+                if(imgPath != null && imgPath.isNotEmpty){
+                  _openFolder(imgPath);
+                }
+              } else if (value == 'delete') {
+
+                setState(() {
+                  _imageNames.removeAt(index);
+                });
+                final SharedPreferences prefs =
+                    await SharedPreferences.getInstance();
+                prefs.setStringList('_imageNames_key', _imageNames);
+              }
+            },
+          ),
         );
         return Dismissible(
             key: Key(imageName),
             onDismissed: (direction) async {
+              // 左滑删除图片名
               setState(() {
                 _imageNames.removeAt(index);
               });
