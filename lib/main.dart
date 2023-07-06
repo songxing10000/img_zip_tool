@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:archive/archive.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_toastr/flutter_toastr.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -52,12 +52,12 @@ class _MyHomePageState extends State<MyHomePage> {
   /// 历史曾用名
   List<String> _imageNames = [];
 
-  final _imageNamesController = TextEditingController();
+  final _imgNameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _imageNamesController.addListener(_onImageNamesChanged);
+    _imgNameController.addListener(_onImageNamesChanged);
     _loadPrefs();
   }
 
@@ -75,13 +75,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void dispose() {
-    _imageNamesController.dispose();
+    _imgNameController.dispose();
     super.dispose();
   }
 
   void _onImageNamesChanged() {
     setState(() {
-      _imageName = _imageNamesController.text;
+      _imageName = _imgNameController.text;
     });
   }
 
@@ -98,7 +98,16 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
   }
+  /// 复制图片名
+_copyImgName() {
+    String imgName = _imgNameController.text;
+    if(imgName.isNotEmpty) {
+       Clipboard.setData(ClipboardData(text: imgName)).then((_){
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("已复制： $imgName")));
+      });
+    }
 
+}
   /// 选取xcassets文件夹
   Future<void> _pickFolder() async {
     final directory = await getDirectoryPath();
@@ -535,7 +544,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ListTile cell = ListTile(
           title: Text(imageName),
           onTap: () {
-            _imageNamesController.text = imageName;
+            _imgNameController.text = imageName;
           },
         );
         return Dismissible(
@@ -567,12 +576,16 @@ class _MyHomePageState extends State<MyHomePage> {
           child: TextField(
 
             textAlign: TextAlign.center,
-            controller: _imageNamesController,
+            controller: _imgNameController,
             decoration: const InputDecoration(
               hintText: '输入图片名',
                 contentPadding:EdgeInsets.fromLTRB(0, 0, 10, 0)
             ),
           ),
+        ),
+        ElevatedButton(
+          onPressed: _copyImgName,
+          child: const Text('复制图片名'),
         ),
       ],
     );
