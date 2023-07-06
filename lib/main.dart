@@ -524,7 +524,7 @@ _copyImgName() {
         const SizedBox(height: 16),
         PathLabel(text:_folderPath),
         const SizedBox(height: 16),
-        buildRow(),
+        buildInputImgNameRow(),
         const SizedBox(height: 16),
         Expanded(
           child: buildListView(),
@@ -557,34 +557,25 @@ _copyImgName() {
         }
 
         ListTile cell = ListTile(
-
-          title: Text(imageName),
           onTap: () {
             // 点击cell
             _imgNameController.text = imageName;
 
 
           },
+          title: Text(imageName),
+
           leading: Image.file(File(imgPath)),
           trailing: PopupMenuButton<String>(
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'open',
-                child: Text('打开'),
-              ),
+
               const PopupMenuItem<String>(
                 value: 'delete',
-                child: Text('删除'),
+                child: Text('删除图片名'),
               ),
             ],
             onSelected: (String value) async {
-              if (value == 'open') {
-                // 打开图片
-
-                if(imgPath.isNotEmpty){
-                  _openFolder(imgPath);
-                }
-              } else if (value == 'delete') {
+               if (value == 'delete') {
 
                 setState(() {
                   _imageNames.removeAt(index);
@@ -596,29 +587,21 @@ _copyImgName() {
             },
           ),
         );
-        return Dismissible(
-            key: Key(imageName),
-            onDismissed: (direction) async {
-              // 左滑删除图片名
-              setState(() {
-                _imageNames.removeAt(index);
-              });
-              final SharedPreferences prefs =
-                  await SharedPreferences.getInstance();
-              prefs.setStringList('_imageNames_key', _imageNames);
-            },
-            background: Container(
-              color: Colors.red,
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 16),
-              child: const Icon(Icons.delete, color: Colors.white),
-            ),
-            child: cell);
+        return  GestureDetector(
+
+          onDoubleTap: () {
+            // 双击打开图片
+            if(imgPath.isNotEmpty){
+              _openFolder(imgPath);
+            }
+          },
+          child: cell,
+        );
       },
     );
   }
-
-  Row buildRow() {
+/// 输入图片名UI
+  Row buildInputImgNameRow() {
     return Row(
       children: [
         Expanded(
