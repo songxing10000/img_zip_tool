@@ -533,7 +533,7 @@ _copyImgName() {
 
         ElevatedButton(
           onPressed: _extractZip,
-          child: const Text('开始工作'),
+          child: const Text('4.开始工作'),
         ),
       ],
     );
@@ -544,8 +544,20 @@ _copyImgName() {
       itemCount: _imageNames.length,
       itemBuilder: (context, index) {
         final imageName = _imageNames[index];
+        String imgPath = imgInfoDict[imageName] ?? '';
+        if(imgPath.isEmpty){
+          imgPath = '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/$imageName.imageset/$imageName@2x.png';
+          File file = File(imgPath);
+
+          file.exists().then((bool exists) {
+            if (!exists) {
+              imgPath = '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/red_info_icon.imageset/red_info_icon@2x.png';
+            }
+          });
+        }
 
         ListTile cell = ListTile(
+
           title: Text(imageName),
           onTap: () {
             // 点击cell
@@ -553,6 +565,7 @@ _copyImgName() {
 
 
           },
+          leading: Image.file(File(imgPath)),
           trailing: PopupMenuButton<String>(
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               const PopupMenuItem<String>(
@@ -567,8 +580,8 @@ _copyImgName() {
             onSelected: (String value) async {
               if (value == 'open') {
                 // 打开图片
-                String? imgPath = imgInfoDict[imageName];
-                if(imgPath != null && imgPath.isNotEmpty){
+
+                if(imgPath.isNotEmpty){
                   _openFolder(imgPath);
                 }
               } else if (value == 'delete') {
@@ -615,7 +628,7 @@ _copyImgName() {
             textAlign: TextAlign.center,
             controller: _imgNameController,
             decoration: const InputDecoration(
-              hintText: '输入图片名',
+              hintText: '3.输入图片名',
                 contentPadding:EdgeInsets.fromLTRB(0, 0, 10, 0)
             ),
           ),
