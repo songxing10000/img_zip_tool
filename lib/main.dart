@@ -22,9 +22,11 @@ enum FolderType {
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Zip File Extractor',
       home: MyHomePage(),
@@ -33,8 +35,10 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -51,9 +55,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
   /// 历史曾用名
   List<String> _imageNames = [];
+
   /// 图片信息，key图片名，value图片路径
   Map<String, String> imgInfoDict = {
-    'calendar_purple_bg': '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/red_info_icon.imageset/red_info_icon@2x.png'
+    'calendar_purple_bg':
+        '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/red_info_icon.imageset/red_info_icon@2x.png'
   };
   final _imgNameController = TextEditingController();
 
@@ -101,16 +107,18 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     }
   }
+
   /// 复制图片名
-_copyImgName() {
+  _copyImgName() {
     String imgName = _imgNameController.text;
-    if(imgName.isNotEmpty) {
-       Clipboard.setData(ClipboardData(text: imgName)).then((_){
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("已复制： $imgName")));
+    if (imgName.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: imgName)).then((_) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("已复制： $imgName")));
       });
     }
+  }
 
-}
   /// 选取xcassets文件夹
   Future<void> _pickFolder() async {
     final directory = await getDirectoryPath();
@@ -204,8 +212,7 @@ _copyImgName() {
       // mastergo.com上导出切图，默认会有123x图，但是1x图是不需要的，所以得删除1x图片
       _delete1xImg(imagesetDir);
       _writeContentJsonFile(imagesetDir);
-    }
-    else if (_folderPath.endsWith('res')) {
+    } else if (_folderPath.endsWith('res')) {
       // 安卓
       for (final file in archive) {
         var filename = file.name;
@@ -213,20 +220,19 @@ _copyImgName() {
         *  mdpi/组 3.png xhdpi/组 3.png  xxhdpi/组 3.png xxxhdpi/组 3.png
         * */
         if (file.isFile && filename.endsWith('.png')) {
-
-          if(file.name.contains('@2x')){
+          if (file.name.contains('@2x')) {
             // 跳过2x
             FlutterToastr.show('iOS图片zip??', context,
                 duration: 1, position: FlutterToastr.center);
             return;
           }
-          if(file.name.contains('@3x')){
+          if (file.name.contains('@3x')) {
             // 跳过3x
             FlutterToastr.show('iOS图片zip??', context,
                 duration: 1, position: FlutterToastr.center);
             return;
           }
-          if(!file.name.contains('dpi')){
+          if (!file.name.contains('dpi')) {
             // 跳过flutter
             FlutterToastr.show('flutter图片zip??', context,
                 duration: 1, position: FlutterToastr.center);
@@ -236,8 +242,9 @@ _copyImgName() {
           if (filename.contains('/')) {
             String folderName = filename.split('/')[0];
 
-            String desFilePath = '${imagesetDir.path}/mipmap-$folderName/$_imageName.png';
-            if(File(desFilePath).existsSync()){
+            String desFilePath =
+                '${imagesetDir.path}/mipmap-$folderName/$_imageName.png';
+            if (File(desFilePath).existsSync()) {
               hasSameImg = true;
               FlutterToastr.show('重名了', context,
                   duration: 1, position: FlutterToastr.center);
@@ -245,15 +252,13 @@ _copyImgName() {
               break;
             }
 
-
             File(desFilePath)
               ..createSync(recursive: true)
               ..writeAsBytesSync(data);
           }
         }
       }
-    }
-    else {
+    } else {
       // flutter 1x图片放目录 2x图片放2.0x文件，3x图片放3.0x文件夹
 
       for (final file in archive) {
@@ -263,19 +268,19 @@ _copyImgName() {
         * */
 
         if (file.isFile && filename.endsWith('.png')) {
-          if(file.name.contains('dpi')){
+          if (file.name.contains('dpi')) {
             // 跳过安卓
             FlutterToastr.show('安卓图片zip??', context,
                 duration: 1, position: FlutterToastr.center);
             return;
           }
-          if(file.name.contains('@2x')){
+          if (file.name.contains('@2x')) {
             // 跳过2x
             FlutterToastr.show('iOS图片zip??', context,
                 duration: 1, position: FlutterToastr.center);
             return;
           }
-          if(file.name.contains('@3x')){
+          if (file.name.contains('@3x')) {
             // 跳过3x
             FlutterToastr.show('iOS图片zip??', context,
                 duration: 1, position: FlutterToastr.center);
@@ -285,8 +290,9 @@ _copyImgName() {
           if (filename.contains('/')) {
             String folderName = filename.split('/')[0];
 
-            String desFilePath = '${imagesetDir.path}/$folderName/$_imageName.png';
-            if(File(desFilePath).existsSync()){
+            String desFilePath =
+                '${imagesetDir.path}/$folderName/$_imageName.png';
+            if (File(desFilePath).existsSync()) {
               hasSameImg = true;
               FlutterToastr.show('重名了', context,
                   duration: 1, position: FlutterToastr.center);
@@ -300,7 +306,7 @@ _copyImgName() {
           } else {
             // 1x图片
             String desFilePath = '${imagesetDir.path}/$_imageName.png';
-            if(File(desFilePath).existsSync()){
+            if (File(desFilePath).existsSync()) {
               hasSameImg = true;
               FlutterToastr.show('重名了', context,
                   duration: 1, position: FlutterToastr.center);
@@ -314,7 +320,7 @@ _copyImgName() {
         }
       }
     }
-    if(hasSameImg){
+    if (hasSameImg) {
       return;
     }
     FlutterToastr.show('操作完成!', context,
@@ -327,15 +333,16 @@ _copyImgName() {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setStringList('_imageNames_key', _imageNames);
     }
-
   }
-  void _openFolder(String folderPath){
-    if(folderPath.startsWith('file://')){
+
+  void _openFolder(String folderPath) {
+    if (folderPath.startsWith('file://')) {
       launchUrl(Uri.parse(folderPath));
     } else {
       launchUrl(Uri.parse('file://$folderPath'));
     }
   }
+
   List<ArchiveFile> listFilesInDirectory(ArchiveFile directory) {
     final archive = ZipDecoder().decodeBytes(directory.content);
     return archive.where((entry) {
@@ -416,11 +423,9 @@ _copyImgName() {
       // 拖入文件夹
       if (aFile.name.endsWith(".xcassets")) {
         folderType = FolderType.iOS;
-      }
-      else  if (aFile.name.endsWith("res")) {
+      } else if (aFile.name.endsWith("res")) {
         folderType = FolderType.android;
-      }
-      else if (await has2x3xImgFolderAt(aFile.path)) {
+      } else if (await has2x3xImgFolderAt(aFile.path)) {
         folderType = FolderType.flutter;
       }
       setState(() {
@@ -466,7 +471,8 @@ _copyImgName() {
     final type = await FileSystemEntity.type(entity.path);
     return type == FileSystemEntityType.directory;
   }
-  bool isFolderExists(String folderPath){
+
+  bool isFolderExists(String folderPath) {
     Directory dir = Directory(folderPath);
     if (dir.existsSync()) {
       return true;
@@ -477,6 +483,7 @@ _copyImgName() {
   Future<bool> isFileExists(String filePath) async {
     return await File(filePath).exists();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -484,15 +491,28 @@ _copyImgName() {
             onDragDone: (detail) {
               _onDragDone(detail);
             },
-            child: buildContainer()));
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+              child: buildColumn(),
+            )));
+  }
+  String configImgPathFor(String imageName) {
+    String imgPath = imgInfoDict[imageName] ?? '';
+    if (imgPath.isEmpty) {
+      imgPath =
+      '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/$imageName.imageset/$imageName@2x.png';
+      File file = File(imgPath);
+
+      file.exists().then((bool exists) {
+        if (!exists) {
+          imgPath =
+          '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/red_info_icon.imageset/red_info_icon@2x.png';
+        }
+      });
+    }
+    return imgPath;
   }
 
-  Container buildContainer() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-      child: buildColumn(),
-    );
-  }
 
   Column buildColumn() {
     return Column(
@@ -522,7 +542,7 @@ _copyImgName() {
           ],
         ),
         const SizedBox(height: 16),
-        PathLabel(text:_folderPath),
+        PathLabel(text: _folderPath),
         const SizedBox(height: 16),
         buildInputImgNameRow(),
         const SizedBox(height: 16),
@@ -530,7 +550,6 @@ _copyImgName() {
           child: buildListView(),
         ),
         const SizedBox(height: 16),
-
         ElevatedButton(
           onPressed: _extractZip,
           child: const Text('4.开始工作'),
@@ -539,82 +558,73 @@ _copyImgName() {
     );
   }
 
+  /// 上次点击cell的时间，间隔短可判定为双击
+  DateTime? _lastTapTime;
+
+
   ListView buildListView() {
     return ListView.builder(
       itemCount: _imageNames.length,
       itemBuilder: (context, index) {
         final imageName = _imageNames[index];
-        String imgPath = imgInfoDict[imageName] ?? '';
-        if(imgPath.isEmpty){
-          imgPath = '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/$imageName.imageset/$imageName@2x.png';
-          File file = File(imgPath);
-
-          file.exists().then((bool exists) {
-            if (!exists) {
-              imgPath = '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/red_info_icon.imageset/red_info_icon@2x.png';
-            }
-          });
-        }
-
-        ListTile cell = ListTile(
-          onTap: () {
-            // 点击cell
-            _imgNameController.text = imageName;
-
-
-          },
-          title: Text(imageName),
-
-          leading: Image.file(File(imgPath)),
-          trailing: PopupMenuButton<String>(
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-
-              const PopupMenuItem<String>(
-                value: 'delete',
-                child: Text('删除图片名'),
-              ),
-            ],
-            onSelected: (String value) async {
-               if (value == 'delete') {
-
-                setState(() {
-                  _imageNames.removeAt(index);
-                });
-                final SharedPreferences prefs =
-                    await SharedPreferences.getInstance();
-                prefs.setStringList('_imageNames_key', _imageNames);
-              }
-            },
-          ),
-        );
-        return  GestureDetector(
-
-          onDoubleTap: () {
+        String imgPath = configImgPathFor(imageName);
+        void handleCellTap() {
+          final currentTime = DateTime.now();
+          if (_lastTapTime != null &&
+              currentTime.difference(_lastTapTime!) <=
+                  const Duration(milliseconds: 300)) {
+            // 处理双击事件
             // 双击打开图片
-            if(imgPath.isNotEmpty){
+            if (imgPath.isNotEmpty) {
               _openFolder(imgPath);
             }
-          },
-          child: cell,
+          } else {
+            // 处理单击事件
+            _imgNameController.text = imageName;
+          }
+          _lastTapTime = currentTime;
+        }
+
+        return GestureDetector(
+          onTap: handleCellTap,
+          child: buildCell(imageName, imgPath, index),
         );
       },
     );
   }
-/// 输入图片名UI
+  ListTile buildCell(String imageName, String imgPath, int index) {
+
+    return  ListTile(
+      title: Text(imageName),
+      leading: Image.file(File(imgPath)),
+      trailing: PopupMenuButton<String>(
+        itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+          const PopupMenuItem<String>(
+            value: 'delete',
+            child: Text('删除图片名'),
+          ),
+        ],
+        onSelected: (String value) async {
+          if (value == 'delete') {
+
+            setState(() {
+              _imageNames.removeAt(index);
+            });
+            final SharedPreferences prefs =
+            await SharedPreferences.getInstance();
+            prefs.setStringList('_imageNames_key', _imageNames);
+          }
+        },
+      ),
+    );
+  }
+
+  /// 输入图片名UI
   Row buildInputImgNameRow() {
     return Row(
       children: [
         Expanded(
-
-          child: TextField(
-
-            textAlign: TextAlign.center,
-            controller: _imgNameController,
-            decoration: const InputDecoration(
-              hintText: '3.输入图片名',
-                contentPadding:EdgeInsets.fromLTRB(0, 0, 10, 0)
-            ),
-          ),
+          child: buildInputImgNameTF(),
         ),
         ElevatedButton(
           onPressed: _copyImgName,
@@ -623,5 +633,13 @@ _copyImgName() {
       ],
     );
   }
-
+  TextField buildInputImgNameTF(){
+    return TextField(
+      textAlign: TextAlign.center,
+      controller: _imgNameController,
+      decoration: const InputDecoration(
+          hintText: '3.输入图片名',
+          contentPadding: EdgeInsets.fromLTRB(0, 0, 10, 0)),
+    );
+  }
 }
