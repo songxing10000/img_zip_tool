@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
@@ -69,16 +71,43 @@ class _MyHomePageState extends State<MyHomePage> {
     _imgNameController.addListener(_onImageNamesChanged);
     _loadPrefs();
   }
+/// 存储字典到SharedPreferences
+  Future<void> saveDictionary(Map<String, dynamic> dictionary) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    Map<String, String> stringMap = dictionary.map((key, value) => MapEntry(key, value.toString()));
+    String jsonString = jsonEncode(stringMap);
+    await prefs.setString('_imgInfoDict_key', jsonString);
+  }
 
+/// 从SharedPreferences中读取字典
+  Future<Map<String, dynamic>?> loadDictionary() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? jsonString = prefs.getString('_imgInfoDict_key');
+    if (jsonString != null) {
+      Map<String, dynamic> stringMap = jsonDecode(jsonString);
+      Map<String, dynamic> dictionary = stringMap.map((key, value) => MapEntry(key, value));
+      return dictionary;
+    }
+    return null;
+  }
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final String? saveImageNameFilePath = prefs.getString('_imageName_key');
     final String? saveTargetDirFilePath = prefs.getString('_targetDir_key');
     final List<String>? saveImgNames = prefs.getStringList('_imageNames_key');
+    // 从SharedPreferences中读取字典
+    Map<String, dynamic>? loadedDictionary = await loadDictionary();
+    Map<String, String> savedDicty = {};
+    if(loadedDictionary != null){
+      savedDicty =  Map<String, String>.from(loadedDictionary);
+    }
+
+
     setState(() {
       _imageName = saveImageNameFilePath ?? '';
       _folderPath = saveTargetDirFilePath ?? '';
       _imageNames = saveImgNames ?? [];
+      imgInfoDict = savedDicty;
     });
   }
 
@@ -332,6 +361,8 @@ class _MyHomePageState extends State<MyHomePage> {
       });
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setStringList('_imageNames_key', _imageNames);
+      saveDictionary(imgInfoDict);
+       prefs.setString('_targetDir_key', _folderPath);
     }
   }
 
@@ -498,18 +529,21 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   String configImgPathFor(String imageName) {
     String imgPath = imgInfoDict[imageName] ?? '';
+
     if (imgPath.isEmpty) {
       imgPath =
-      '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/$imageName.imageset/$imageName@2x.png';
+      '$_folderPath/$imageName.imageset/$imageName@2x.png';
       File file = File(imgPath);
 
       file.exists().then((bool exists) {
         if (!exists) {
           imgPath =
-          '/Users/mac/Proj/MySwiftProj/NewProjTest/NewProjTest/Assets.xcassets/red_info_icon.imageset/red_info_icon@2x.png';
+          '$_folderPath/red_info_icon.imageset/red_info_icon@2x.png';
         }
       });
     }
+    imgInfoDict[imageName] = imgPath;
+    saveDictionary(imgInfoDict);
     return imgPath;
   }
 
