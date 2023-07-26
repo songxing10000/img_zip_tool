@@ -357,7 +357,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if (_imageName.isNotEmpty && !_imageNames.contains(_imageName)) {
       setState(() {
-        _imageNames.add(_imageName);
+        // 直接塞到最前面
+        // _imageNames.add(_imageName);
+        _imageNames.insert(0, _imageName);
+
       });
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setStringList('_imageNames_key', _imageNames);
