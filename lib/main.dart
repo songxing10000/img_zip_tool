@@ -71,25 +71,29 @@ class _MyHomePageState extends State<MyHomePage> {
     _imgNameController.addListener(_onImageNamesChanged);
     _loadPrefs();
   }
-/// 存储字典到SharedPreferences
+
+  /// 存储字典到SharedPreferences
   Future<void> saveDictionary(Map<String, dynamic> dictionary) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    Map<String, String> stringMap = dictionary.map((key, value) => MapEntry(key, value.toString()));
+    Map<String, String> stringMap =
+        dictionary.map((key, value) => MapEntry(key, value.toString()));
     String jsonString = jsonEncode(stringMap);
     await prefs.setString('_imgInfoDict_key', jsonString);
   }
 
-/// 从SharedPreferences中读取字典
+  /// 从SharedPreferences中读取字典
   Future<Map<String, dynamic>?> loadDictionary() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? jsonString = prefs.getString('_imgInfoDict_key');
     if (jsonString != null) {
       Map<String, dynamic> stringMap = jsonDecode(jsonString);
-      Map<String, dynamic> dictionary = stringMap.map((key, value) => MapEntry(key, value));
+      Map<String, dynamic> dictionary =
+          stringMap.map((key, value) => MapEntry(key, value));
       return dictionary;
     }
     return null;
   }
+
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final String? saveImageNameFilePath = prefs.getString('_imageName_key');
@@ -98,10 +102,9 @@ class _MyHomePageState extends State<MyHomePage> {
     // 从SharedPreferences中读取字典
     Map<String, dynamic>? loadedDictionary = await loadDictionary();
     Map<String, String> savedDicty = {};
-    if(loadedDictionary != null){
-      savedDicty =  Map<String, String>.from(loadedDictionary);
+    if (loadedDictionary != null) {
+      savedDicty = Map<String, String>.from(loadedDictionary);
     }
-
 
     setState(() {
       _imageName = saveImageNameFilePath ?? '';
@@ -360,12 +363,11 @@ class _MyHomePageState extends State<MyHomePage> {
         // 直接塞到最前面
         // _imageNames.add(_imageName);
         _imageNames.insert(0, _imageName);
-
       });
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       prefs.setStringList('_imageNames_key', _imageNames);
       saveDictionary(imgInfoDict);
-       prefs.setString('_targetDir_key', _folderPath);
+      prefs.setString('_targetDir_key', _folderPath);
     }
   }
 
@@ -530,18 +532,17 @@ class _MyHomePageState extends State<MyHomePage> {
               child: buildColumn(),
             )));
   }
+
   String configImgPathFor(String imageName) {
     String imgPath = imgInfoDict[imageName] ?? '';
 
     if (imgPath.isEmpty) {
-      imgPath =
-      '$_folderPath/$imageName.imageset/$imageName@2x.png';
+      imgPath = '$_folderPath/$imageName.imageset/$imageName@2x.png';
       File file = File(imgPath);
 
       file.exists().then((bool exists) {
         if (!exists) {
-          imgPath =
-          '$_folderPath/red_info_icon.imageset/red_info_icon@2x.png';
+          imgPath = '$_folderPath/red_info_icon.imageset/red_info_icon@2x.png';
         }
       });
     }
@@ -549,7 +550,6 @@ class _MyHomePageState extends State<MyHomePage> {
     saveDictionary(imgInfoDict);
     return imgPath;
   }
-
 
   Column buildColumn() {
     return Column(
@@ -598,7 +598,6 @@ class _MyHomePageState extends State<MyHomePage> {
   /// 上次点击cell的时间，间隔短可判定为双击
   DateTime? _lastTapTime;
 
-
   ListView buildListView() {
     return ListView.builder(
       itemCount: _imageNames.length,
@@ -629,9 +628,9 @@ class _MyHomePageState extends State<MyHomePage> {
       },
     );
   }
-  ListTile buildCell(String imageName, String imgPath, int index) {
 
-    return  ListTile(
+  ListTile buildCell(String imageName, String imgPath, int index) {
+    return ListTile(
       title: Text(imageName),
       leading: Image.file(File(imgPath)),
       trailing: PopupMenuButton<String>(
@@ -640,16 +639,26 @@ class _MyHomePageState extends State<MyHomePage> {
             value: 'delete',
             child: Text('删除图片名'),
           ),
+          const PopupMenuItem<String>(
+            value: 'copy',
+            child: Text('复制图片名'),
+          ),
         ],
         onSelected: (String value) async {
           if (value == 'delete') {
-
             setState(() {
               _imageNames.removeAt(index);
             });
             final SharedPreferences prefs =
-            await SharedPreferences.getInstance();
+                await SharedPreferences.getInstance();
             prefs.setStringList('_imageNames_key', _imageNames);
+          } else if (value == 'copy') {
+
+            String imgName = _imageNames[index];
+            Clipboard.setData(ClipboardData(text: imgName)).then((_) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text("已复制： $imgName")));
+            });
           }
         },
       ),
@@ -670,7 +679,8 @@ class _MyHomePageState extends State<MyHomePage> {
       ],
     );
   }
-  TextField buildInputImgNameTF(){
+
+  TextField buildInputImgNameTF() {
     return TextField(
       textAlign: TextAlign.center,
       controller: _imgNameController,
