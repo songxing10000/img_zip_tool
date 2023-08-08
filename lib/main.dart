@@ -357,7 +357,8 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     FlutterToastr.show('操作完成!', context,
         duration: 1, position: FlutterToastr.center);
-
+    // 复制图片名
+    _copyImgName();
     if (_imageName.isNotEmpty && !_imageNames.contains(_imageName)) {
       setState(() {
         // 直接塞到最前面
@@ -636,13 +637,14 @@ class _MyHomePageState extends State<MyHomePage> {
       trailing: PopupMenuButton<String>(
         itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
           const PopupMenuItem<String>(
-            value: 'delete',
-            child: Text('删除图片名'),
-          ),
-          const PopupMenuItem<String>(
             value: 'copy',
             child: Text('复制图片名'),
           ),
+          const PopupMenuItem<String>(
+            value: 'delete',
+            child: Text('删除图片名'),
+          ),
+
         ],
         onSelected: (String value) async {
           if (value == 'delete') {
@@ -670,13 +672,22 @@ class _MyHomePageState extends State<MyHomePage> {
     return Row(
       children: [
         Expanded(
-          child: buildInputImgNameTF(),
+          child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.5),
+                    spreadRadius: 2,
+                    blurRadius: 5,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: buildInputImgNameTF()),
         ),
-        ElevatedButton(
-          onPressed: _copyImgName,
-          child: const Text('复制图片名'),
-        ),
-      ],
+      ]
     );
   }
 
@@ -684,9 +695,12 @@ class _MyHomePageState extends State<MyHomePage> {
     return TextField(
       textAlign: TextAlign.center,
       controller: _imgNameController,
-      decoration: const InputDecoration(
+      decoration:   InputDecoration(
           hintText: '3.输入图片名',
-          contentPadding: EdgeInsets.fromLTRB(0, 0, 10, 0)),
-    );
+          contentPadding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+        border: InputBorder.none,
+      filled: true,
+      fillColor: Colors.grey[200],
+    ));
   }
 }
