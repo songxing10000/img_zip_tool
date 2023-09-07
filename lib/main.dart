@@ -12,6 +12,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:archive/archive.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:path/path.dart' as path;
 
 import 'PathLabel.dart';
 
@@ -101,16 +102,42 @@ class _MyHomePageState extends State<MyHomePage> {
     final List<String>? saveImgNames = prefs.getStringList('_imageNames_key');
     // 从SharedPreferences中读取字典
     Map<String, dynamic>? loadedDictionary = await loadDictionary();
-    Map<String, String> savedDicty = {};
+    Map<String, String> savedDict = {};
     if (loadedDictionary != null) {
-      savedDicty = Map<String, String>.from(loadedDictionary);
+      savedDict = Map<String, String>.from(loadedDictionary);
     }
+// 遍历 savedDict 中的每个键值对，并检查文件是否存在，如果不存在就删除对应的键值对。
+    savedDict.forEach((key, value) async {
+      final file = File(value);
+      if (!(await file.exists())) {
+        // 可能是文件夹内的图片，是另外的名字
+        String parentFolderPath = path.dirname(value);
+        List<String> imgs = await find2xImageFilesInFolder(parentFolderPath);
+        if(imgs.isNotEmpty){
+          String fileName = path.basename(value);
+          if(fileName.contains(" ")){
+            savedDict.remove(key);
+          } else {
+            savedDict[key] = imgs[0];
+          }
 
+
+        } else {
+          // 可能真没有
+          savedDict.remove(key);
+        }
+      }
+    });
+
+    saveDictionary(savedDict);
     setState(() {
       _imageName = saveImageNameFilePath ?? '';
       _folderPath = saveTargetDirFilePath ?? '';
       _imageNames = saveImgNames ?? [];
-      imgInfoDict = savedDicty;
+
+      savedDict.forEach((key, value) {
+        imgInfoDict[key] = value;
+      });
     });
   }
 
@@ -386,7 +413,21 @@ class _MyHomePageState extends State<MyHomePage> {
       return entry.isFile && entry.name.endsWith('.png');
     }).toList();
   }
+  Future<List<String>> find2xImageFilesInFolder(String folderPath) async {
+    final folder = Directory(folderPath);
+    List<String> filePaths = [];
 
+    if (await folder.exists()) {
+      final files = await folder.list().toList();
+      for (var file in files) {
+        if (file is File && file.path.endsWith('@2x.png')) {
+          filePaths.add(file.path);
+        }
+      }
+    }
+
+    return filePaths;
+  }
   void _delete1xImg(Directory imagesetDir) {
     final files = imagesetDir.listSync();
     for (final file in files) {
@@ -572,7 +613,7 @@ class _MyHomePageState extends State<MyHomePage> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("iOS选xcassets目录，Flutter选有2.0x和3.0x这个目录，安卓选res目录"),
+            const Text("选xcassets目录"),
             ElevatedButton(
               onPressed: _pickFolder,
               child: const Text('2.选择或拽入目录'),

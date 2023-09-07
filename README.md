@@ -1,6 +1,6 @@
 # img_zip_tool
  
-支持`iOS`、`安卓`、`Flutter`
+支持`iOS`
  ![](./Snipaste_2023-07-07_11-16-39.png)
 
 ---
