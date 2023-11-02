@@ -212,6 +212,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _extractZip() async {
     if (_zip_file_path.isEmpty) {
+      _showErrorDialog('未找到Zip文件');
       return;
     }
 
@@ -732,16 +733,26 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  TextField buildInputImgNameTF() {
-    return TextField(
-      textAlign: TextAlign.center,
-      controller: _imgNameController,
-      decoration:   InputDecoration(
-          hintText: '3.输入图片名',
-          contentPadding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
-        border: InputBorder.none,
-      filled: true,
-      fillColor: Colors.grey[200],
-    ));
+  RawKeyboardListener buildInputImgNameTF() {
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      onKey: (RawKeyEvent event) {
+        if (event.runtimeType == RawKeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.enter) {
+
+          _extractZip();
+        }
+      },
+      child: TextField(
+        textAlign: TextAlign.center,
+        controller: _imgNameController,
+        decoration:   InputDecoration(
+            hintText: '3.输入图片名',
+            contentPadding: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+          border: InputBorder.none,
+        filled: true,
+        fillColor: Colors.grey[200],
+      )),
+    );
   }
 }
