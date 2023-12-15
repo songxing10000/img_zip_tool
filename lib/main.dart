@@ -118,7 +118,11 @@ class _MyHomePageState extends State<MyHomePage> {
           if(fileName.contains(" ")){
             savedDict.remove(key);
           } else {
-            savedDict[key] = imgs[0];
+            String rightImgPath = imgs[0];
+            savedDict[key] = rightImgPath;
+            // 更新
+            imgInfoDict[key] = rightImgPath;
+
           }
 
 
